@@ -1,31 +1,3 @@
-Skip to content
-r-classes-2025
-pca-alenafkatz-afk
-Repository navigation
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security
-Insights
-Settings
-pca-alenafkatz-afk
-/assignment.R
-Go to file
-t
-alenafkatz-afk
-alenafkatz-afk
-35
-9282f40
-· 
-19 minutes ago
-
-Code
-
-Blame
-68 lines (60 loc) · 2.11 KB
 # установите и загрузите пакеты
 library(friends)
 library(tidyverse)
