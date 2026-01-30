@@ -4,21 +4,27 @@ library(tidyverse)
 library(tidytext)
 library(factoextra) 
 
+
 # 1. отберите 6 главных персонажей (по количеству реплик)
+# сохраните как символьный вектор
 top_speakers <- friends |> 
   count(speaker, name = "n_replicas") |> 
   arrange(desc(n_replicas)) |> 
   slice_head(n = 6) |> 
   pull(speaker)
 
-# 2. токенизация и удаление цифр
+# 2. отфильтруйте топ-спикеров, 
+# токенизируйте их реплики, удалите из них цифры
+# столбец с токенами должен называться word
+# оставьте только столбцы speaker, word
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  filter(!str_detect(word, "\\d")) |>  
+  filter(!str_detect(word, "\\d")) |> 
   select(speaker, word)
 
-# 3. отбор 500 слов и расчет tf
+# 3. отберите по 500 самых частотных слов для каждого персонажа
+# посчитайте относительные частотности для слов
 friends_tf <- friends_tokens |> 
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
@@ -27,43 +33,52 @@ friends_tf <- friends_tokens |>
   ungroup() |> 
   select(speaker, word, tf)
 
-# 4. преобразование в широкий формат
+# 4. преобразуйте в широкий формат; 
+# столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
 friends_tf_wide <- friends_tf |> 
-  pivot_wider(names_from = word, values_from = tf, values_fill = 0) |> 
+  select(speaker, word, tf) |>                
+  pivot_wider(                                
+    names_from = word,                        
+    values_from = tf,                         
+    values_fill = 0                           
+  ) |> 
   column_to_rownames(var = "speaker") |>      
-  as.data.frame()
+  as.data.frame() 
 
-# 5. кластеризация k-means
+# 5. установите зерно 123
+# проведите кластеризацию k-means (k = 3) на относительных значениях частотности (nstart = 20)
+# используйте scale()
+
+# ваш код здесь
 set.seed(123)
 km.out <- kmeans(
-  x = scale(friends_tf_wide), 
-  centers = 3,                 
-  nstart = 20                  
+  x = scale(friends_tf_wide),  # масштабируем данные (центрирование и нормирование)
+  centers = 3,                 # количество кластеров k = 3
+  nstart = 20                  # количество случайных начальных наборов
 )
-names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA с округлением исходных данных
-friends_tf_wide_rounded <- round(friends_tf_wide, 10)
-pca_fit <- prcomp(friends_tf_wide_rounded, scale = TRUE)
 
-# 7. биплот
+# 6. примените к матрице метод главных компонент (prcomp)
+# центрируйте и стандартизируйте, использовав аргументы функции
+pca_fit <- prcomp(friends_tf_wide, scale. = TRUE, center = TRUE)
+
+# 7. Покажите наблюдения и переменные вместе (биплот)
+# в качестве геома используйте текст (=имя персонажа)
+# цветом закодируйте кластер, выделенный при помощи k-means
+# отберите 20 наиболее значимых переменных (по косинусу, см. документацию к функции)
+# сохраните график как переменную q
+
 q <- fviz_pca_biplot(pca_fit,
-                     geom.ind = "point",         
-                     geom.var = c("arrow", "text"), 
+                     # Уберите geom = "text" полностью!
                      select.var = list(cos2 = 20),
-                     col.ind = as.factor(km.out$cluster), 
+                     habillage = as.factor(km.out$cluster),
                      col.var = "steelblue",
                      alpha.var = 0.3,
                      repel = TRUE,
                      ggtheme = theme_minimal(),
-                     title = "") +
-  geom_text(aes(x = pca_fit$x[, 1], 
-                y = pca_fit$x[, 2],
-                label = rownames(friends_tf_wide)),
-            vjust = -0.8,  
-            size = 4,
-            fontface = "bold",
-            show.legend = FALSE) +
+                     addlabel = "ind",  # ← ДОБАВЬТЕ ЭТО! Это добавляет текст для наблюдений
+                     label = "var",     # ← Это для переменных (слов)
+                     invisible = "none") +  # ← Показываем всё
   theme(legend.position = "none")
 
 print(q)
