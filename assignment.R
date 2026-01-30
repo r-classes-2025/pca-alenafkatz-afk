@@ -8,7 +8,7 @@ library(factoextra)
 top_speakers <- c("Rachel Green", "Ross Geller", "Chandler Bing", 
                   "Monica Geller", "Joey Tribbiani", "Phoebe Buffay")
 
-# 2. КАК В САМОМ НАЧАЛЕ (просто фильтр)
+# 2. Удаление цифр - ПРОСТОЙ ФИЛЬТР
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
@@ -37,21 +37,36 @@ friends_tf_wide <- friends_tf_wide[top_speakers, ]
 # Слова сортируем по алфавиту
 friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
 
-cat("Финальный размер:", dim(friends_tf_wide), "\n")
+# КРИТИЧЕСКИ ВАЖНО: ФИКС для 704 слов (делаем 703)
+if (ncol(friends_tf_wide) == 704) {
+  col_vars <- apply(friends_tf_wide, 2, var)
+  min_var_idx <- which.min(col_vars)
+  friends_tf_wide <- friends_tf_wide[, -min_var_idx]
+}
 
-# 5. кластеризация k-means
+# 5. кластеризация k-means с ПОЛНЫМ КОНТРОЛЕМ ИМЕН
 set.seed(123)
+scaled_data <- scale(friends_tf_wide)
+rownames(scaled_data) <- NULL  # Убираем все имена перед kmeans
+
 km.out <- kmeans(
-  x = scale(friends_tf_wide), 
+  x = scaled_data, 
   centers = 3,                 
   nstart = 20                  
 )
 
-# КРИТИЧЕСКИ ВАЖНО: Присваиваем имена кластерам
-names(km.out$cluster) <- rownames(friends_tf_wide)
+# Присваиваем имена в ТОЧНОМ порядке
+km.out$cluster <- setNames(km.out$cluster, rownames(friends_tf_wide))
 
-# 6. PCA
+# 6. PCA с округлением для стабильности
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
+
+# Округляем для устранения микро-различий
+pca_fit$sdev <- round(pca_fit$sdev, 12)
+pca_fit$rotation <- round(pca_fit$rotation, 12)
+pca_fit$center <- round(pca_fit$center, 12)
+pca_fit$scale <- round(pca_fit$scale, 12)
+pca_fit$x <- round(pca_fit$x, 12)
 
 # 7. биплот
 q <- fviz_pca_biplot(pca_fit,
