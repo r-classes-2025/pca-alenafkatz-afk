@@ -20,18 +20,16 @@ top_speakers <- friends |>
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  filter(!str_detect(word, "\\d")) |> 
+  filter(!str_detect(word, "\\d")) |>
   select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
 # посчитайте относительные частотности для слов
 friends_tf <- friends_tokens |> 
+  count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
-  mutate(total = n()) |> 
-  add_count(word, name = "n") |> 
-  distinct(speaker, word, total, n) |> 
-  mutate(tf = n / total) |> 
-  arrange(speaker, word) |> 
+  mutate(tf = n / sum(n)) |> 
+  arrange(speaker, desc(n), word) |>  
   slice_head(n = 500) |> 
   ungroup() |> 
   select(speaker, word, tf)
@@ -93,27 +91,7 @@ q <- fviz_pca_biplot(pca_fit,
             fontface = "bold",
             show.legend = FALSE)  
 
-print(q)
 
-
-friends_tf |> count(speaker) |> print()
-
-friends_tf |> 
-  group_by(speaker) |> 
-  slice_head(n = 3) |> 
-  print()
-
-# Создайте тестовый PCA с "идеальными" параметрами
-pca_test <- prcomp(friends_tf_wide, 
-                   scale. = TRUE, 
-                   center = TRUE,
-                   tol = NULL,
-                   rank. = NULL)
-
-# Проверьте разницу с вашим pca_fit
-cat("Разница в стандартных отклонениях (sdev):\n")
-diff_sdev <- abs(pca_fit$sdev - pca_test$sdev) / pca_fit$sdev * 100
-print(round(diff_sdev[1:5], 6))
 
 
 
