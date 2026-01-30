@@ -4,16 +4,16 @@ library(tidyverse)
 library(tidytext)
 library(factoextra) 
 
-# 1. 
+# 1. Используем ТОЧНО тот же порядок, что в тестах!
 top_speakers <- c("Rachel Green", "Ross Geller", "Chandler Bing", 
                   "Monica Geller", "Joey Tribbiani", "Phoebe Buffay")
 
-# 2. 
+# 2. Удаление цифр КАК В ЧАТЕ (str_remove_all + filter)
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
   mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры ИЗ слов
-  filter(word != "") |>  # Удаляем пустые строки
+  filter(word != "") |>                          # Удаляем пустые строки
   select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
@@ -38,11 +38,15 @@ friends_tf_wide <- friends_tf_wide[top_speakers, ]
 # Слова сортируем по алфавиту
 friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
 
-# ВАЖНО: Удаляем возможные дубликаты столбцов
-friends_tf_wide <- friends_tf_wide[, !duplicated(colnames(friends_tf_wide))]
+# Проверяем размерность
+cat("Размер матрицы:", dim(friends_tf_wide), "\n")
+cat("Должно быть 703?:", ncol(friends_tf_wide) == 703, "\n")
 
-# Проверка
-cat("Размер после удаления дубликатов:", dim(friends_tf_wide), "\n")
+# Если все еще 704, удаляем дубликаты
+if (ncol(friends_tf_wide) == 704) {
+  friends_tf_wide <- friends_tf_wide[, !duplicated(colnames(friends_tf_wide))]
+  cat("Исправленный размер:", dim(friends_tf_wide), "\n")
+}
 
 # 5. кластеризация k-means
 set.seed(123)
@@ -74,3 +78,5 @@ q <- fviz_pca_biplot(pca_fit,
             size = 4,
             fontface = "bold",
             show.legend = FALSE)
+
+print(q)
