@@ -4,15 +4,16 @@ library(tidyverse)
 library(tidytext)
 library(factoextra) 
 
-# 1. Используем ТОЧНО тот же порядок, что в тестах!
+# 1. 
 top_speakers <- c("Rachel Green", "Ross Geller", "Chandler Bing", 
                   "Monica Geller", "Joey Tribbiani", "Phoebe Buffay")
 
-# 2. отфильтруйте топ-спикеров, 
+# 2. 
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  filter(!str_detect(word, "\\d")) |>  
+  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры ИЗ слов
+  filter(word != "") |>  # Удаляем пустые строки
   select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
@@ -37,8 +38,11 @@ friends_tf_wide <- friends_tf_wide[top_speakers, ]
 # Слова сортируем по алфавиту
 friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
 
-# КРИТИЧЕСКИ ВАЖНО: Округляем для точного совпадения
-friends_tf_wide <- round(friends_tf_wide, digits = 12)
+# ВАЖНО: Удаляем возможные дубликаты столбцов
+friends_tf_wide <- friends_tf_wide[, !duplicated(colnames(friends_tf_wide))]
+
+# Проверка
+cat("Размер после удаления дубликатов:", dim(friends_tf_wide), "\n")
 
 # 5. кластеризация k-means
 set.seed(123)
@@ -48,7 +52,7 @@ km.out <- kmeans(
   nstart = 20                  
 )
 
-# 6. PCA - используем scale = TRUE (без точки!)
+# 6. PCA
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
 
 # 7. биплот
@@ -70,5 +74,3 @@ q <- fviz_pca_biplot(pca_fit,
             size = 4,
             fontface = "bold",
             show.legend = FALSE)
-
-print(q)
