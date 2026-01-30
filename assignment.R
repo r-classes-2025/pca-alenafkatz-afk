@@ -8,11 +8,11 @@ library(factoextra)
 top_speakers <- c("Rachel Green", "Ross Geller", "Chandler Bing", 
                   "Monica Geller", "Joey Tribbiani", "Phoebe Buffay")
 
-# 2. Удаление цифр - ВОЗВРАЩАЕМСЯ к простому фильтру!
+# 2. КАК В САМОМ НАЧАЛЕ (просто фильтр)
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  filter(!str_detect(word, "\\d")) |>  # Просто фильтруем слова с цифрами
+  filter(!str_detect(word, "\\d")) |>  
   select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
@@ -37,27 +37,7 @@ friends_tf_wide <- friends_tf_wide[top_speakers, ]
 # Слова сортируем по алфавиту
 friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
 
-# КРИТИЧЕСКИ ВАЖНО: Удаляем столбцы с нулевой дисперсией
-# (одинаковые значения у всех персонажей)
-original_cols <- ncol(friends_tf_wide)
-friends_tf_wide <- friends_tf_wide[, apply(friends_tf_wide, 2, var) > 0]
-new_cols <- ncol(friends_tf_wide)
-
-cat("Было столбцов:", original_cols, "\n")
-cat("Стало столбцов:", new_cols, "\n")
-cat("Удалено столбцов с нулевой дисперсией:", original_cols - new_cols, "\n")
-
-# Если все еще 704, пробуем другой способ
-if (new_cols == 704) {
-  # Находим дубликаты по содержанию (не по именам)
-  matrix_data <- as.matrix(friends_tf_wide)
-  col_dups <- duplicated(t(matrix_data), fromLast = FALSE) | duplicated(t(matrix_data), fromLast = TRUE)
-  if (any(col_dups)) {
-    cat("Найдено дубликатов по содержанию:", sum(col_dups), "\n")
-    friends_tf_wide <- friends_tf_wide[, !col_dups]
-    cat("Исправленный размер:", dim(friends_tf_wide), "\n")
-  }
-}
+cat("Финальный размер:", dim(friends_tf_wide), "\n")
 
 # 5. кластеризация k-means
 set.seed(123)
@@ -66,6 +46,9 @@ km.out <- kmeans(
   centers = 3,                 
   nstart = 20                  
 )
+
+# КРИТИЧЕСКИ ВАЖНО: Присваиваем имена кластерам
+names(km.out$cluster) <- rownames(friends_tf_wide)
 
 # 6. PCA
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
@@ -89,7 +72,5 @@ q <- fviz_pca_biplot(pca_fit,
             size = 4,
             fontface = "bold",
             show.legend = FALSE)
-
-
 
 print(q)
