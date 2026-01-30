@@ -20,8 +20,9 @@ top_speakers <- friends |>
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  filter(!str_detect(word, "\\d")) |>
+  filter(!str_detect(word, "\\d")) |>  
   select(speaker, word)
+
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
 # посчитайте относительные частотности для слов
@@ -29,19 +30,21 @@ friends_tf <- friends_tokens |>
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
   mutate(tf = n / sum(n)) |> 
-  arrange(speaker, desc(n), word) |>  
-  slice_head(n = 500) |> 
+  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  #
   ungroup() |> 
   select(speaker, word, tf)
 
 # 4. преобразуйте в широкий формат; 
 # столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
 friends_tf_wide <- friends_tf |> 
-  arrange(speaker, word) |> 
   select(speaker, word, tf) |>                
   pivot_wider(names_from = word, values_from = tf, values_fill = 0) |> 
   column_to_rownames(var = "speaker") |>      
   as.data.frame()
+
+# СОРТИРОВКА матрицы
+friends_tf_wide <- friends_tf_wide[order(rownames(friends_tf_wide)), 
+                                   order(colnames(friends_tf_wide))]
 
 # 5. установите зерно 123
 # проведите кластеризацию k-means (k = 3) на относительных значениях частотности (nstart = 20)
@@ -89,9 +92,4 @@ q <- fviz_pca_biplot(pca_fit,
             vjust = -0.8,  
             size = 4,
             fontface = "bold",
-            show.legend = FALSE)  
-
-
-
-
-
+            show.legend = FALSE)
