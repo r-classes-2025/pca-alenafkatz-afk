@@ -1,3 +1,31 @@
+Skip to content
+r-classes-2025
+pca-alenafkatz-afk
+Repository navigation
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Settings
+pca-alenafkatz-afk
+/assignment.R
+Go to file
+t
+alenafkatz-afk
+alenafkatz-afk
+35
+9282f40
+· 
+19 minutes ago
+
+Code
+
+Blame
+68 lines (60 loc) · 2.11 KB
 # установите и загрузите пакеты
 library(friends)
 library(tidyverse)
@@ -11,13 +39,12 @@ top_speakers <- friends |>
   slice_head(n = 6) |> 
   pull(speaker)
 
-# 2. ПОЛНАЯ очистка как в чате
+# 2. Удаление цифр КАК В ЧАТЕ
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры
-  mutate(word = str_remove_all(word, "[[:punct:]]")) |>  # Удаляем пунктуацию
-  filter(word != "") |>  # Удаляем пустые
+  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры ИЗ слов
+  filter(word != "") |>                          # Удаляем пустые строки
   select(speaker, word)
 
 # 3. отбор 500 слов
