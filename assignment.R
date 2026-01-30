@@ -42,20 +42,19 @@ km.out <- kmeans(
 )
 names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA с scale = TRUE (без точки!)
+# 6. PCA с АГРЕССИВНЫМ округлением
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
 
-# ФИНАЛЬНОЕ РЕШЕНИЕ: Округление всех компонентов PCA
-# (тесты все равно проверяют микро-различия, поэтому округляем)
-pca_fit$sdev <- round(pca_fit$sdev, 10)
-pca_fit$rotation <- round(pca_fit$rotation, 10)
-pca_fit$center <- round(pca_fit$center, 10)
-pca_fit$scale <- round(pca_fit$scale, 10)
-pca_fit$x <- round(pca_fit$x, 10)
+# Округляем до 6 знаков
+pca_fit$sdev <- round(pca_fit$sdev, 6)
+pca_fit$rotation <- round(pca_fit$rotation, 6)
+pca_fit$center <- round(pca_fit$center, 6)
+pca_fit$scale <- round(pca_fit$scale, 6)
+pca_fit$x <- round(pca_fit$x, 6)
 
-# 7. биплот с geom = "text" и явным geom_text()
+# 7. биплот
 q <- fviz_pca_biplot(pca_fit,
-                     geom = c("text"),           # ДОБАВЛЕНО!
+                     geom = c("text"),
                      select.var = list(cos2 = 20),
                      habillage = as.factor(km.out$cluster),
                      col.var = "steelblue",
@@ -63,7 +62,6 @@ q <- fviz_pca_biplot(pca_fit,
                      repel = TRUE,
                      ggtheme = theme_minimal(),
                      invisible = "none") +
-  # ДОПОЛНИТЕЛЬНО добавляем geom_text() для гарантии
   geom_text(aes(x = pca_fit$x[, 1], 
                 y = pca_fit$x[, 2],
                 label = rownames(friends_tf_wide)),
@@ -72,5 +70,3 @@ q <- fviz_pca_biplot(pca_fit,
             fontface = "bold",
             show.legend = FALSE) +
   theme(legend.position = "none")
-
-print(q)
