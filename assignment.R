@@ -10,7 +10,8 @@ top_speakers <- friends |>
   count(speaker, name = "n_replicas") |> 
   arrange(desc(n_replicas)) |> 
   slice_head(n = 6) |> 
-  pull(speaker)
+  pull(speaker) |>
+  sort()
 
 # 2. отфильтруйте топ-спикеров, 
 # токенизируйте их реплики, удалите из них цифры
@@ -27,10 +28,12 @@ friends_tokens <- friends |>
 friends_tf <- friends_tokens |> 
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
-  mutate(tf = n / sum(n)) |> 
-  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
+  mutate(tf = n / sum(n)) |>  
+  arrange(speaker, desc(n), word) |>  
+  group_by(speaker) |> 
+  slice(1:500) |>  
   ungroup() |> 
-  select(speaker, word, tf)
+  select(speaker, word, tf) 
 
 # 4. преобразуйте в широкий формат; 
 # столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
@@ -39,8 +42,8 @@ friends_tf_wide <- friends_tf |>
   column_to_rownames(var = "speaker") |>      
   as.data.frame()
 
-# ВАЖНО: Проверьте количество столбцов
-dim(friends_tf_wide)  # Должно быть 6 x 703
+friends_tf_wide <- friends_tf_wide[sort(rownames(friends_tf_wide)), 
+                                   sort(colnames(friends_tf_wide))]
 
 # 5. установите зерно 123
 # проведите кластеризацию k-means (k = 3) на относительных значениях частотности (nstart = 20)
@@ -56,8 +59,8 @@ km.out <- kmeans(
 # центрируйте и стандартизируйте, использовав аргументы функции
 # ВАЖНО: Используйте ТОЛЬКО эти аргументы, без tol и rank.
 pca_fit <- prcomp(friends_tf_wide, 
-                  scale. = TRUE, 
-                  center = TRUE)  
+                  scale = TRUE, 
+                  center = TRUE)
 
 # 7. Покажите наблюдения и переменные вместе (биплот)
 # в качестве геома используйте текст (=имя персонажа)
@@ -83,3 +86,4 @@ q <- fviz_pca_biplot(pca_fit,
             size = 4,
             fontface = "bold",
             show.legend = FALSE)
+
