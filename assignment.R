@@ -11,12 +11,13 @@ top_speakers <- friends |>
   slice_head(n = 6) |> 
   pull(speaker)
 
-# 2. Удаление цифр КАК В ЧАТЕ
+# 2. ПОЛНАЯ очистка как в чате
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры ИЗ слов
-  filter(word != "") |>                          # Удаляем пустые строки
+  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры
+  mutate(word = str_remove_all(word, "[[:punct:]]")) |>  # Удаляем пунктуацию
+  filter(word != "") |>  # Удаляем пустые
   select(speaker, word)
 
 # 3. отбор 500 слов
