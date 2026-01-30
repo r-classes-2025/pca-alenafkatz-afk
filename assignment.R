@@ -21,7 +21,6 @@ friends_tokens <- friends |>
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
   filter(!str_detect(word, "\\d")) |> 
-  anti_join(stop_words, by = "word") |> 
   select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
@@ -30,7 +29,7 @@ friends_tf <- friends_tokens |>
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
   mutate(tf = n / sum(n)) |> 
-  slice_max(order_by = n, n = 500) |> 
+  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
   ungroup() |> 
   select(speaker, word, tf)
 
@@ -70,7 +69,7 @@ pca_fit <- prcomp(friends_tf_wide, scale. = TRUE, center = TRUE)
 # сохраните график как переменную q
 
 q <- fviz_pca_biplot(pca_fit,
-                     geom = "text",           # ← "text" а не c("text")
+                     geom = "text",           
                      select.var = list(cos2 = 20),
                      habillage = as.factor(km.out$cluster),
                      col.var = "steelblue",
@@ -78,6 +77,8 @@ q <- fviz_pca_biplot(pca_fit,
                      repel = TRUE,
                      ggtheme = theme_minimal()) +
   theme(legend.position = "none")
+
+
 
 
 
