@@ -11,21 +11,20 @@ top_speakers <- friends |>
   slice_head(n = 6) |> 
   pull(speaker)
 
-# 2. токенизация и удаление цифр
+# 2. Удаление цифр КАК В ЧАТЕ
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  filter(!str_detect(word, "\\d")) |>  
+  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры ИЗ слов
+  filter(word != "") |>                          # Удаляем пустые строки
   select(speaker, word)
 
-# 3. ВОСПРОИЗВОДИМЫЙ отбор 500 слов
+# 3. отбор 500 слов
 friends_tf <- friends_tokens |> 
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
   mutate(tf = n / sum(n)) |> 
-  arrange(speaker, desc(n), word) |>  # Сортировка по n, потом по word
-  group_by(speaker) |> 
-  slice_head(n = 500) |>              # Воспроизводимый отбор
+  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
   ungroup() |> 
   select(speaker, word, tf)
 
@@ -44,12 +43,9 @@ km.out <- kmeans(
 )
 names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA с ВСЕМИ возможными параметрами
-pca_fit <- prcomp(friends_tf_wide, 
-                  scale. = TRUE,    # с точкой!
-                  center = TRUE, 
-                  rank. = 6,        # явно указываем 6 компонент
-                  tol = NULL)       # не обрезаем малые компоненты
+# 6. PCA
+pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
+
 # 7. биплот
 q <- fviz_pca_biplot(pca_fit,
                      geom = c("text"),
