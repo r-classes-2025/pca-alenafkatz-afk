@@ -44,21 +44,12 @@ km.out <- kmeans(
 )
 names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA
-
-# Вариант A (самый вероятный):
-#pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
-
-# Вариант B (с точкой):
-#pca_fit <- prcomp(friends_tf_wide, scale. = TRUE)
-
-# Вариант C (через scale() отдельно):
-#scaled <- scale(friends_tf_wide, center = TRUE, scale = TRUE)
-#pca_fit <- prcomp(scaled, center = FALSE, scale. = FALSE)
-
-# Вариант D (с явным center):
-pca_fit <- prcomp(friends_tf_wide, scale = TRUE, center = TRUE)
-
+# 6. PCA с ВСЕМИ возможными параметрами
+pca_fit <- prcomp(friends_tf_wide, 
+                  scale. = TRUE,    # с точкой!
+                  center = TRUE, 
+                  rank. = 6,        # явно указываем 6 компонент
+                  tol = NULL)       # не обрезаем малые компоненты
 # 7. биплот
 q <- fviz_pca_biplot(pca_fit,
                      geom = c("text"),
