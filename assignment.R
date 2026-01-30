@@ -18,22 +18,21 @@ top_speakers <- friends |>
 # столбец с токенами должен называться word
 # оставьте только столбцы speaker, word
 friends_tokens <- friends |> 
-  filter(speaker %in% top_speakers) |>
-  unnest_tokens(word, text) |>
-  filter(!str_detect(word, "\\d")) |>
-  select(speaker, word) 
+  filter(speaker %in% top_speakers) |> 
+  unnest_tokens(word, text) |> 
+  filter(!str_detect(word, "\\d")) |> 
+  anti_join(stop_words, by = "word") |> 
+  select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
 # посчитайте относительные частотности для слов
 friends_tf <- friends_tokens |> 
+  count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
-  mutate(total = n()) |> 
-  add_count(word, name = "n") |> 
-  distinct(speaker, word, total, n) |> 
-  mutate(tf = n / total) |> 
-  arrange(speaker, -n) |> 
-  slice_head(n = 500) |> 
-  ungroup() 
+  mutate(tf = n / sum(n)) |> 
+  slice_max(order_by = n, n = 500) |> 
+  ungroup() |> 
+  select(speaker, word, tf)
 
 # 4. преобразуйте в широкий формат; 
 # столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
@@ -71,13 +70,14 @@ pca_fit <- prcomp(friends_tf_wide, scale. = TRUE, center = TRUE)
 # сохраните график как переменную q
 
 q <- fviz_pca_biplot(pca_fit,
-                     geom = c("text"),           # отображаем имена персонажей как текст
-                     select.var = list(cos2 = 20),  # 20 наиболее значимых переменных по косинусу
-                     habillage = as.factor(km.out$cluster),  # цветом закодируйте кластер
-                     col.var = "steelblue",      # цвет для переменных (слов)
-                     alpha.var = 0.3,            # прозрачность для переменных
-                     repel = TRUE,               # избегаем наложения текста
+                     geom = "text",           # ← "text" а не c("text")
+                     select.var = list(cos2 = 20),
+                     habillage = as.factor(km.out$cluster),
+                     col.var = "steelblue",
+                     alpha.var = 0.3,
+                     repel = TRUE,
                      ggtheme = theme_minimal()) +
-  theme(legend.position = "none")  
+  theme(legend.position = "none")
+
 
 
