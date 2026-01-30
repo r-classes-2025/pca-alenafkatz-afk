@@ -69,17 +69,25 @@ pca_fit <- prcomp(friends_tf_wide, scale. = TRUE, center = TRUE)
 # сохраните график как переменную q
 
 q <- fviz_pca_biplot(pca_fit,
-                     # Уберите geom = "text" полностью!
+                     geom.ind = "point",         
+                     geom.var = c("arrow", "text"), 
                      select.var = list(cos2 = 20),
-                     habillage = as.factor(km.out$cluster),
+                     col.ind = as.factor(km.out$cluster), 
                      col.var = "steelblue",
                      alpha.var = 0.3,
                      repel = TRUE,
                      ggtheme = theme_minimal(),
-                     addlabel = "ind",  # ← ДОБАВЬТЕ ЭТО! Это добавляет текст для наблюдений
-                     label = "var",     # ← Это для переменных (слов)
-                     invisible = "none") +  # ← Показываем всё
-  theme(legend.position = "none")
+                     title = "",
+                     legend.title = "Кластер") +
+  theme(legend.position = "none") +
+  geom_text(aes(x = pca_fit$x[, 1], 
+                y = pca_fit$x[, 2],
+                label = rownames(friends_tf_wide),
+                color = as.factor(km.out$cluster)),
+            vjust = -0.8,  
+            size = 4,
+            fontface = "bold",
+            show.legend = FALSE)  
 
 print(q)
 
