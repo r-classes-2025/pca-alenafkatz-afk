@@ -29,7 +29,7 @@ friends_tf <- friends_tokens |>
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
   mutate(tf = n / sum(n)) |> 
-  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
+  slice_max(order_by = n, n = 500, with_ties = FALSE) |> 
   ungroup() |> 
   select(speaker, word, tf)
 
@@ -37,13 +37,9 @@ friends_tf <- friends_tokens |>
 # столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
 friends_tf_wide <- friends_tf |> 
   select(speaker, word, tf) |>                
-  pivot_wider(                                
-    names_from = word,                        
-    values_from = tf,                         
-    values_fill = 0                           
-  ) |> 
+  pivot_wider(names_from = word, values_from = tf, values_fill = 0) |> 
   column_to_rownames(var = "speaker") |>      
-  as.data.frame() 
+  as.data.frame()
 
 # 5. установите зерно 123
 # проведите кластеризацию k-means (k = 3) на относительных значениях частотности (nstart = 20)
