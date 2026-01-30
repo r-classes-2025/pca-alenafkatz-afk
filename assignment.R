@@ -47,10 +47,10 @@ names(km.out$cluster) <- rownames(friends_tf_wide)
 # 6. PCA
 
 # Вариант A (самый вероятный):
-pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
+#pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
 
 # Вариант B (с точкой):
-#pca_fit <- prcomp(friends_tf_wide, scale. = TRUE)
+pca_fit <- prcomp(friends_tf_wide, scale. = TRUE)
 
 # Вариант C (через scale() отдельно):
 #scaled <- scale(friends_tf_wide, center = TRUE, scale = TRUE)
