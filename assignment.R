@@ -4,27 +4,28 @@ library(tidyverse)
 library(tidytext)
 library(factoextra) 
 
-# 1. ЖЕСТКО задаем порядок как в тестах!
-top_speakers <- c("Rachel Green", "Ross Geller", "Chandler Bing", 
-                  "Monica Geller", "Joey Tribbiani", "Phoebe Buffay")
+# 1. ВЕРНУТЬ динамический порядок!
+top_speakers <- friends |> 
+  count(speaker, name = "n_replicas") |> 
+  arrange(desc(n_replicas)) |> 
+  slice_head(n = 6) |> 
+  pull(speaker)
 
-# 2. Удаление цифр - простой фильтр
+# 2. Удаление цифр как в задании
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
   filter(!str_detect(word, "\\d")) |>  
   select(speaker, word)
 
-# 3. Воспроизводимый отбор 500 слов
+# 3. ТОЧНО как в задании - slice_max с with_ties = FALSE
 friends_tf <- friends_tokens |> 
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
-  mutate(tf = n / sum(n)) |>  
-  arrange(speaker, desc(n), word) |>  # Сортировка для воспроизводимости
-  group_by(speaker) |> 
-  slice(1:500) |>                      # Вместо slice_max
+  mutate(tf = n / sum(n)) |> 
+  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
   ungroup() |> 
-  select(speaker, word, tf) 
+  select(speaker, word, tf)
 
 # 4. Преобразование в широкий формат
 friends_tf_wide <- friends_tf |> 
@@ -32,60 +33,41 @@ friends_tf_wide <- friends_tf |>
   column_to_rownames(var = "speaker") |>      
   as.data.frame()
 
-# СОРТИРОВКА в точном порядке
-friends_tf_wide <- friends_tf_wide[top_speakers, ]
-friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
+# НЕ УДАЛЯЕМ СТОЛБЦЫ! Оставляем 704 слова
+# НЕ СОРТИРУЕМ СЛОВА по алфавиту! pivot_wider дает свой порядок
 
-# ФИКС: 704 → 703 слова
-if (ncol(friends_tf_wide) == 704) {
-  col_vars <- apply(friends_tf_wide, 2, var)
-  min_var_idx <- which.min(col_vars)
-  friends_tf_wide <- friends_tf_wide[, -min_var_idx]
-}
-
-# 5. K-means с контролем имен
+# 5. K-means 
 set.seed(123)
-scaled_data <- scale(friends_tf_wide)
-rownames(scaled_data) <- NULL
-
 km.out <- kmeans(
-  x = scaled_data, 
+  x = scale(friends_tf_wide), 
   centers = 3,                 
   nstart = 20                  
 )
 
-# Присваиваем имена в точном порядке
-km.out$cluster <- setNames(km.out$cluster, rownames(friends_tf_wide))
+# Присваиваем имена
+names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA с округлением
+# 6. PCA БЕЗ ОКРУГЛЕНИЯ
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
 
-# Округление убивает микро-различия
-pca_fit$sdev <- round(pca_fit$sdev, 12)
-pca_fit$rotation <- round(pca_fit$rotation, 12)
-pca_fit$center <- round(pca_fit$center, 12)
-pca_fit$scale <- round(pca_fit$scale, 12)
-pca_fit$x <- round(pca_fit$x, 12)
-
-# 7. Биплот С ТЕКСТОМ для персонажей (исправление второй ошибки!)
+# 7. Биплот
 q <- fviz_pca_biplot(pca_fit,
-                     geom.ind = "point",          # Точки для наблюдений
-                     geom.var = c("arrow", "text"), # Стрелки и текст для переменных
-                     select.var = list(cos2 = 20),  # 20 наиболее значимых переменных
+                     geom.ind = "point",         
+                     geom.var = c("arrow", "text"), 
+                     select.var = list(cos2 = 20),
                      col.ind = as.factor(km.out$cluster), 
                      col.var = "steelblue",
                      alpha.var = 0.3,
                      repel = TRUE,
                      ggtheme = theme_minimal(),
                      title = "") +
-  # КРИТИЧЕСКИ ВАЖНО: Добавляем текст для персонажей
+  theme(legend.position = "none") +
   geom_text(aes(x = pca_fit$x[, 1], 
                 y = pca_fit$x[, 2],
                 label = rownames(friends_tf_wide)),
             vjust = -0.8,  
             size = 4,
             fontface = "bold",
-            show.legend = FALSE) +
-  theme(legend.position = "none")
+            show.legend = FALSE)
 
 print(q)
