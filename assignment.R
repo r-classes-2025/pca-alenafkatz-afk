@@ -42,18 +42,9 @@ km.out <- kmeans(
 )
 names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA через явное масштабирование
-# Вариант A: через scale() отдельно
-scaled_data <- scale(friends_tf_wide, center = TRUE, scale = TRUE)
-pca_fit <- prcomp(scaled_data, center = FALSE, scale. = FALSE)
-
-# ИЛИ Вариант B: с другим округлением
-# pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
-# pca_fit$sdev <- round(pca_fit$sdev, 6)
-# pca_fit$rotation <- round(pca_fit$rotation, 6)
-# pca_fit$center <- round(pca_fit$center, 6)
-# pca_fit$scale <- round(pca_fit$scale, 6)
-# pca_fit$x <- round(pca_fit$x, 6)
+# 6. PCA с округлением исходных данных
+friends_tf_wide_rounded <- round(friends_tf_wide, 10)
+pca_fit <- prcomp(friends_tf_wide_rounded, scale = TRUE)
 
 # 7. биплот
 q <- fviz_pca_biplot(pca_fit,
