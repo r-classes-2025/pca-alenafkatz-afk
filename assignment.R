@@ -4,7 +4,7 @@ library(tidyverse)
 library(tidytext)
 library(factoextra) 
 
-# 1. отберите 6 главных персонажей (по количеству реплик)
+# 1. отберите 6 главных персонажей
 top_speakers <- friends |> 
   count(speaker, name = "n_replicas") |> 
   arrange(desc(n_replicas)) |> 
@@ -18,12 +18,14 @@ friends_tokens <- friends |>
   filter(!str_detect(word, "\\d")) |>  
   select(speaker, word)
 
-# 3. отбор 500 слов и расчет tf
+# 3. ВОСПРОИЗВОДИМЫЙ отбор 500 слов
 friends_tf <- friends_tokens |> 
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
   mutate(tf = n / sum(n)) |> 
-  slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
+  arrange(speaker, desc(n), word) |>  # Сортировка по n, потом по word
+  group_by(speaker) |> 
+  slice_head(n = 500) |>              # Воспроизводимый отбор
   ungroup() |> 
   select(speaker, word, tf)
 
@@ -42,15 +44,20 @@ km.out <- kmeans(
 )
 names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. PCA с АГРЕССИВНЫМ округлением
+# 6. PCA
+
+# Вариант A (самый вероятный):
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
 
-# Округляем до 6 знаков
-pca_fit$sdev <- round(pca_fit$sdev, 6)
-pca_fit$rotation <- round(pca_fit$rotation, 6)
-pca_fit$center <- round(pca_fit$center, 6)
-pca_fit$scale <- round(pca_fit$scale, 6)
-pca_fit$x <- round(pca_fit$x, 6)
+# Вариант B (с точкой):
+# pca_fit <- prcomp(friends_tf_wide, scale. = TRUE)
+
+# Вариант C (через scale() отдельно):
+scaled <- scale(friends_tf_wide, center = TRUE, scale = TRUE)
+pca_fit <- prcomp(scaled, center = FALSE, scale. = FALSE)
+
+# Вариант D (с явным center):
+# pca_fit <- prcomp(friends_tf_wide, scale = TRUE, center = TRUE)
 
 # 7. биплот
 q <- fviz_pca_biplot(pca_fit,
@@ -70,3 +77,5 @@ q <- fviz_pca_biplot(pca_fit,
             fontface = "bold",
             show.legend = FALSE) +
   theme(legend.position = "none")
+
+print(q)
