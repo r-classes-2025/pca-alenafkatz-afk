@@ -22,29 +22,25 @@ friends_tokens <- friends |>
   filter(!str_detect(word, "\\d")) |>  
   select(speaker, word)
 
-# 3. отберите по 500 самых частотных слов для каждого персонажа
-# посчитайте относительные частотности для слов
+# 3. ПРАВИЛЬНЫЙ отбор 500 слов (только 3 столбца!)
 friends_tf <- friends_tokens |> 
   count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
   mutate(tf = n / sum(n)) |> 
   slice_max(order_by = n, n = 500, with_ties = FALSE) |>  
   ungroup() |> 
-  select(speaker, word, tf)
+  select(speaker, word, tf)  # ТОЛЬКО 3 столбца!
 
-# 4. преобразуйте в широкий формат; 
-# столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
+# 4. преобразуйте в широкий формат
 friends_tf_wide <- friends_tf |> 
   pivot_wider(names_from = word, values_from = tf, values_fill = 0) |> 
   column_to_rownames(var = "speaker") |>      
   as.data.frame()
 
-# КРИТИЧЕСКИ ВАЖНО: СОРТИРОВКА СЛОВ ПО АЛФАВИТУ!
-friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
+# НЕ СОРТИРУЕМ слова! Оставляем порядок от pivot_wider
+# (тесты ожидают порядок по частоте, не по алфавиту!)
 
-# 5. установите зерно 123
-# проведите кластеризацию k-means (k = 3) на относительных значениях частотности (nstart = 20)
-# используйте scale()
+# 5. кластеризация k-means
 set.seed(123)
 km.out <- kmeans(
   x = scale(friends_tf_wide), 
@@ -55,15 +51,10 @@ km.out <- kmeans(
 # Присваиваем имена кластерам
 names(km.out$cluster) <- rownames(friends_tf_wide)
 
-# 6. примените к матрице метод главных компонент (prcomp)
-# центрируйте и стандартизируйте, использовав аргументы функции
+# 6. PCA
 pca_fit <- prcomp(friends_tf_wide, scale = TRUE)
 
-# 7. Покажите наблюдения и переменные вместе (биплот)
-# в качестве геома используйте текст (=имя персонажа)
-# цветом закодируйте кластер, выделенный при помощи k-means
-# отберите 20 наиболее значимых переменных (по косинусу, см. документация к функции)
-# сохраните график как переменную q
+# 7. биплот С ТЕКСТОМ
 q <- fviz_pca_biplot(pca_fit,
                      geom.ind = "point",         
                      geom.var = c("arrow", "text"), 
@@ -74,7 +65,7 @@ q <- fviz_pca_biplot(pca_fit,
                      repel = TRUE,
                      ggtheme = theme_minimal(),
                      title = "") +
-  # Явно добавляем текст для имен персонажей
+  # КРИТИЧЕСКИ ВАЖНО: geom_text для имен персонажей
   geom_text(aes(x = pca_fit$x[, 1], 
                 y = pca_fit$x[, 2],
                 label = rownames(friends_tf_wide)),
