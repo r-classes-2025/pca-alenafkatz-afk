@@ -26,16 +26,20 @@ friends_tokens <- friends |>
 # 3. отберите по 500 самых частотных слов для каждого персонажа
 # посчитайте относительные частотности для слов
 friends_tf <- friends_tokens |> 
-  count(speaker, word, name = "n") |> 
   group_by(speaker) |> 
-  mutate(tf = n / sum(n)) |> 
-  slice_max(order_by = n, n = 500, with_ties = FALSE) |> 
+  mutate(total = n()) |> 
+  add_count(word, name = "n") |> 
+  distinct(speaker, word, total, n) |> 
+  mutate(tf = n / total) |> 
+  arrange(speaker, -n) |> 
+  slice_head(n = 500) |> 
   ungroup() |> 
   select(speaker, word, tf)
 
 # 4. преобразуйте в широкий формат; 
 # столбец c именем спикера превратите в имя ряда, используя подходящую функцию 
 friends_tf_wide <- friends_tf |> 
+  arrange(speaker, word) |> 
   select(speaker, word, tf) |>                
   pivot_wider(names_from = word, values_from = tf, values_fill = 0) |> 
   column_to_rownames(var = "speaker") |>      
@@ -48,15 +52,19 @@ friends_tf_wide <- friends_tf |>
 # ваш код здесь
 set.seed(123)
 km.out <- kmeans(
-  x = scale(friends_tf_wide),  # масштабируем данные (центрирование и нормирование)
-  centers = 3,                 # количество кластеров k = 3
-  nstart = 20                  # количество случайных начальных наборов
+  x = scale(friends_tf_wide), 
+  centers = 3,                 
+  nstart = 20                  
 )
 
 
 # 6. примените к матрице метод главных компонент (prcomp)
 # центрируйте и стандартизируйте, использовав аргументы функции
-pca_fit <- prcomp(friends_tf_wide, scale. = TRUE, center = TRUE)
+pca_fit <- prcomp(friends_tf_wide, 
+                  scale. = TRUE, 
+                  center = TRUE,
+                  tol = 0,
+                  rank. = min(dim(friends_tf_wide)))  
 
 # 7. Покажите наблюдения и переменные вместе (биплот)
 # в качестве геома используйте текст (=имя персонажа)
