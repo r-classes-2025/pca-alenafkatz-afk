@@ -8,12 +8,11 @@ library(factoextra)
 top_speakers <- c("Rachel Green", "Ross Geller", "Chandler Bing", 
                   "Monica Geller", "Joey Tribbiani", "Phoebe Buffay")
 
-# 2. Удаление цифр КАК В ЧАТЕ (str_remove_all + filter)
+# 2. Удаление цифр - ВОЗВРАЩАЕМСЯ к простому фильтру!
 friends_tokens <- friends |> 
   filter(speaker %in% top_speakers) |> 
   unnest_tokens(word, text) |> 
-  mutate(word = str_remove_all(word, "\\d+")) |>  # Удаляем цифры ИЗ слов
-  filter(word != "") |>                          # Удаляем пустые строки
+  filter(!str_detect(word, "\\d")) |>  # Просто фильтруем слова с цифрами
   select(speaker, word)
 
 # 3. отберите по 500 самых частотных слов для каждого персонажа
@@ -38,14 +37,26 @@ friends_tf_wide <- friends_tf_wide[top_speakers, ]
 # Слова сортируем по алфавиту
 friends_tf_wide <- friends_tf_wide[, sort(colnames(friends_tf_wide))]
 
-# Проверяем размерность
-cat("Размер матрицы:", dim(friends_tf_wide), "\n")
-cat("Должно быть 703?:", ncol(friends_tf_wide) == 703, "\n")
+# КРИТИЧЕСКИ ВАЖНО: Удаляем столбцы с нулевой дисперсией
+# (одинаковые значения у всех персонажей)
+original_cols <- ncol(friends_tf_wide)
+friends_tf_wide <- friends_tf_wide[, apply(friends_tf_wide, 2, var) > 0]
+new_cols <- ncol(friends_tf_wide)
 
-# Если все еще 704, удаляем дубликаты
-if (ncol(friends_tf_wide) == 704) {
-  friends_tf_wide <- friends_tf_wide[, !duplicated(colnames(friends_tf_wide))]
-  cat("Исправленный размер:", dim(friends_tf_wide), "\n")
+cat("Было столбцов:", original_cols, "\n")
+cat("Стало столбцов:", new_cols, "\n")
+cat("Удалено столбцов с нулевой дисперсией:", original_cols - new_cols, "\n")
+
+# Если все еще 704, пробуем другой способ
+if (new_cols == 704) {
+  # Находим дубликаты по содержанию (не по именам)
+  matrix_data <- as.matrix(friends_tf_wide)
+  col_dups <- duplicated(t(matrix_data), fromLast = FALSE) | duplicated(t(matrix_data), fromLast = TRUE)
+  if (any(col_dups)) {
+    cat("Найдено дубликатов по содержанию:", sum(col_dups), "\n")
+    friends_tf_wide <- friends_tf_wide[, !col_dups]
+    cat("Исправленный размер:", dim(friends_tf_wide), "\n")
+  }
 }
 
 # 5. кластеризация k-means
@@ -78,5 +89,7 @@ q <- fviz_pca_biplot(pca_fit,
             size = 4,
             fontface = "bold",
             show.legend = FALSE)
+
+
 
 print(q)
